@@ -1,10 +1,15 @@
 module StructuralBase
 
-using Optim, MDPTools
+using Optim, MDPTools, Reexport
+@reexport using StatsBase
 const AbstractUtility = MDPTools.AbstractUtility
 const AbstractState = MDPTools.AbstractState
 export EstimationMethod, EstimationResults, AbstractUtility,
-        AbstractTrace, ConvergenceInfo
+        AbstractTrace, ConvergenceInfo, LinearUtility,
+        AbstractState
+
+import StatsBase: loglikelihood
+
 
 abstract EstimationMethod
 abstract ConvergenceInfo
@@ -21,18 +26,15 @@ TraceNFXP(K, n_var) = TraceNFXP(zeros(K, n_var),
                                 zeros(K),
                                 zeros(K))
 
-type EstimationResults{T<:EstimationMethod}
+type EstimationResults{T<:EstimationMethod, Tf<:Real}
     E::T
+    loglikelihood::Tf
+    ∇²loglikelihood::Matrix{Tf}
     conv::ConvergenceInfo
-    trace::Optim.MultivariateOptimizationResults
+    trace::Any#::Optim.MultivariateOptimizationResults FIXME should be MultivariateOptimizationResults
+    std_err
 end
 
-
-type EstimationResultsNPL
-    E::EstimationMethod
-    conv::ConvergenceInfo
-    trace
-end
 
 type ConvergenceNPL <: ConvergenceInfo
     maxK::Int64
@@ -63,4 +65,6 @@ TraceNPL(K, n) = TraceNPL(zeros(K, n),
                           zeros(K),
                           zeros(K))
 
+loglikelihood(res) = res.loglikelihood
+vcov(res) = res.vcov
 end # module
