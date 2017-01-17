@@ -65,6 +65,9 @@ TraceNPL(K, n) = TraceNPL(zeros(K, n),
                           zeros(K),
                           zeros(K))
 
+nobs(res) = res.E.D.nobs
 loglikelihood(res) = res.loglikelihood
-vcov(res) = res.vcov
+hessian(res::EstimationResults) = res.∇²loglikelihood*nobs(res)
+vcov(res::EstimationResults) = inv(-hessian(res))
+stderr(res::EstimationResults) = sqrt(diag(vcov(res)))
 end # module
