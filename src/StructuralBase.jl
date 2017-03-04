@@ -6,7 +6,8 @@ const AbstractUtility = MDPTools.AbstractUtility
 const AbstractState = MDPTools.AbstractState
 export EstimationMethod, EstimationResults, AbstractUtility,
         AbstractTrace, ConvergenceInfo, LinearUtility,
-        AbstractState, hessian, gradient, loglikelihood
+        AbstractState, hessian, gradient, loglikelihood,
+        tstat
 
 import StatsBase: loglikelihood
 import Base: gradient
@@ -21,18 +22,12 @@ abstract AbstractTrace
 abstract Trace
 
 
-TraceNFXP(K, n_var) = TraceNFXP(zeros(K, n_var),
-                                zeros(K),
-                                zeros(K),
-                                zeros(K),
-                                zeros(K))
-
 type EstimationResults{T<:EstimationMethod, Tf<:Real}
     E::T
     loglikelihood::Tf
     ∇loglikelihood::Vector{Tf}
     ∇²loglikelihood::Matrix{Tf}
-    tdf::Optim.TwiceDifferentiableFunction #TwiceDifferentiableFunction
+    tdf::Optim.TwiceDifferentiable #TwiceDifferentiableFunction
     coef::Vector{Tf}
     conv::ConvergenceInfo
     trace::Any#::Optim.MultivariateOptimizationResults FIXME should be MultivariateOptimizationResults
@@ -40,35 +35,15 @@ type EstimationResults{T<:EstimationMethod, Tf<:Real}
     meta
 end
 
-type ConvergenceNPL <: ConvergenceInfo
-    maxK::Int64
-    # Outer loop
-    flag::Bool
-    outer::Int64
-    norm_θ::Float64
-    # Inner loop
-    ll::Float64
-    norm_grad::Float64
-    iter_maxlike::Int64
-end
+# computational details
+convinfo(res::EstimationResults) = res.conv
+outer_iterations(res::EstimationResults) = convinfo(res).outer
+inner_iterations(res::EstimationResults) = inner_iterations(convinfo(res))
 
-ConvergenceNPL() = ConvergenceNPL(0, false, 0, 0., 0., 0., 0)
+newton_iterations(res::EstimationResults) = newton_iterations(convinfo(res))
+contraction_iterations(res::EstimationResults) = contraction_iterations(convinfo(res))
 
-
-type TraceNPL <: Trace
-    θ::Matrix{Float64}
-    norm_Δθ::Vector{Float64}
-    ll::Vector{Float64}
-    Δll::Vector{Float64}
-    norm_g::Vector{Float64}
-end
-
-TraceNPL(K, n) = TraceNPL(zeros(K, n),
-                          zeros(K),
-                          zeros(K),
-                          zeros(K),
-                          zeros(K))
-
+# loglikelihood
 nobs(res) = res.nobs
 loglikelihood(res) = res.loglikelihood
 loglikelihood(res, x) = -res.tdf.f(x)*nobs(res)
@@ -85,6 +60,8 @@ function hessian(res::EstimationResults, x)
     res.tdf.h!(x, h)
     -h*nobs(res)
 end
+
+# coefficients and inference
 coef(res::EstimationResults) = res.coef
 coef(res, i) = coef(res)[i]
 vcov(res::EstimationResults) = inv(-hessian(res))
