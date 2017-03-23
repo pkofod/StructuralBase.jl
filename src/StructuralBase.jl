@@ -65,8 +65,8 @@ end
 coef(res::EstimationResults) = res.coef
 coef(res, i) = coef(res)[i]
 vcov(res::EstimationResults) = inv(-hessian(res))
-stderr(res::EstimationResults) = sqrt(diag(vcov(res)))
-stderr(res::EstimationResults, i) = sqrt(diag(vcov(res)))[i]
+stderr(res::EstimationResults) = sqrt.(diag(vcov(res)))
+stderr(res::EstimationResults, i) = sqrt.(diag(vcov(res)))[i]
 tstat(res, i, x) = (coef(res, i)-x)/(stderr(res, i))
 tstat(res, i) = tstat(res, i, 0)
 tstat(res, x::Vector) = [tstat(res, i, x[i]) for i = 1:length(x)]
